@@ -30,7 +30,7 @@ def upload_comic(access_token, group_id):
   response = requests.get('https://api.vk.com/method/photos.getWallUploadServer', params=payload)
   print(response.json())
   upload_url = response.json()['response']['upload_url']
-  with open('./image.png', 'rb') as comic:
+  with open('image.png', 'rb') as comic:
     files = {'photo': comic}
     response = requests.post(upload_url, files=files)
     response.raise_for_status()
