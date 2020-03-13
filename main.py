@@ -9,9 +9,9 @@ def get_random_comic_url_and_comment():
   total_comic_number = response.json()['num']
   random_comic_number = random.randint(0, total_comic_number)
   response = requests.get(f'http://xkcd.com/{random_comic_number}/info.0.json')
-  comic_json_content = response.json()
-  comic_url = comic_json_content['img']
-  comic_comment = comic_json_content['alt']
+  comic_details = response.json()
+  comic_url = comic_details['img']
+  comic_comment = comic_details['alt']
   return comic_url, comic_comment
 
 
@@ -22,6 +22,11 @@ def download_comic(url):
     image.write(response.content)
 
 
+def check_response_for_errors(response):
+  if 'error' in response.json():
+    raise requests.exceptions.HTTPError(response.json()['error'])
+
+
 def upload_comic(access_token, group_id):
   payload = {
       "access_token": f'{access_token}',
@@ -29,22 +34,20 @@ def upload_comic(access_token, group_id):
       "group_id": group_id
   }
   response = requests.get('https://api.vk.com/method/photos.getWallUploadServer', params=payload)
-  if 'error' in response.json():
-    raise requests.exceptions.HTTPError(response.json()['error'])
+  check_response_for_errors(response)
   upload_url = response.json()['response']['upload_url']
   with open('image.png', 'rb') as comic:
     files = {'photo': comic}
     response = requests.post(upload_url, files=files)
-    if 'error' in response.json():
-      raise requests.exceptions.HTTPError(response.json()['error'])
+    photo_upload_details = response.json()
+    check_response_for_errors(response)
     payload.update({
-        'hash': f'{response.json()["hash"]}',
-        'photo': f'{response.json()["photo"]}',
-        'server': f'{response.json()["server"]}'
+        'hash': f'{photo_upload_details["hash"]}',
+        'photo': f'{photo_upload_details["photo"]}',
+        'server': f'{photo_upload_details["server"]}'
     })
     response = requests.post('https://api.vk.com/method/photos.saveWallPhoto', data=payload)
-    if 'error' in response.json():
-      raise requests.exceptions.HTTPError(response.json()['error'])
+    check_response_for_errors(response)
     return response.json()
 
 
@@ -58,8 +61,7 @@ def post_comic(access_token, group_id, json_object, comic_comment):
       "message": f'{comic_comment}'
   }
   response = requests.get('https://api.vk.com/method/wall.post', params=payload)
-  if 'error' in response.json():
-    raise requests.exceptions.HTTPError(response.json()['error'])
+  check_response_for_errors(response)
 
 
 def main():
